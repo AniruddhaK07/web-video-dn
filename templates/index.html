@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  SYS.DWN // Main Interface
+  Brutalist tech-wear UI for the media acquisition terminal.
+-->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SYS.DWN</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="deco deco-tl">+</div>
+    <div class="deco deco-tr">+</div>
+    <div class="deco deco-bl">+</div>
+    <div class="deco deco-br">+</div>
+    
+    <button class="power-off-btn" id="power-off-btn" title="SHUTDOWN SYSTEM">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
+            <line x1="12" y1="2" x2="12" y2="12"></line>
+        </svg>
+    </button>
+    
+    <div class="side-text left">SYS.OP // 01.00.00</div>
+    <div class="side-text right">DATA.STREAM_ACQUIRE</div>
+
+    <main class="container">
+        <header class="header">
+            <h1>A-G-Y // DWN</h1>
+            <p class="subtitle">[ PROTOCOL: MEDIA_ACQUISITION ]</p>
+        </header>
+        
+        <form id="download-form" class="download-form">
+            <div class="input-group">
+                <label for="url">TARGET.URL</label>
+                <input type="url" id="url" name="url" placeholder="INPUT VALID NETWORK PROTOCOL..." required>
+            </div>
+            
+            <div class="options-row">
+                <div class="input-group select-group">
+                    <label for="quality">RES.MATRIX</label>
+                    <select id="quality" name="quality">
+                        <option value="best">MAX_AVAILABLE</option>
+                        <option value="1080p">1080P_CAP</option>
+                        <option value="720p">720P_CAP</option>
+                    </select>
+                </div>
+                
+                <div class="input-group select-group">
+                    <label for="format">FORMAT.CONTAINER</label>
+                    <select id="format" name="format">
+                        <option value="mp4">VID_MP4</option>
+                        <option value="mkv">VID_MKV</option>
+                        <option value="mp3">AUD_MP3</option>
+                    </select>
+                </div>
+            </div>
+            
+            <button type="submit" class="submit-btn" id="submit-btn">
+                <span>INITIALIZE_SEQUENCE</span>
+            </button>
+        </form>
+        
+        <div id="progress-container" class="progress-container hidden">
+            <div class="status-box">
+                <span class="status-label">STATUS</span>
+                <span class="status-text" id="status-text">CONNECTING...</span>
+            </div>
+            
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progress-bar"></div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-box"><span class="label">SPD</span><span class="value" id="speed">--</span></div>
+                <div class="stat-box"><span class="label">ETA</span><span class="value" id="eta">--</span></div>
+                <div class="stat-box"><span class="label">PRG</span><span class="value" id="percent">0%</span></div>
+            </div>
+        </div>
+        
+        <div id="success-container" class="success-container hidden">
+            <div class="alert-box success">
+                <div class="alert-header">[ OK ] TASK_COMPLETED</div>
+                <div class="alert-body" id="success-filename"></div>
+            </div>
+            <button class="secondary-btn" id="reset-btn">NEW_ACQUISITION</button>
+        </div>
+        
+        <div id="error-container" class="error-container hidden">
+            <div class="alert-box error">
+                <div class="alert-header">[ ERR ] FATAL_EXCEPTION</div>
+                <div class="alert-body" id="error-message"></div>
+            </div>
+            <button class="secondary-btn" id="retry-btn">REBOOT_SEQUENCE</button>
+        </div>
+
+        <div id="offline-container" class="offline-container hidden">
+            <h1 class="offline-text">SYSTEM OFFLINE</h1>
+            <p class="offline-sub">CONNECTION TERMINATED. YOU MAY NOW CLOSE THIS WINDOW.</p>
+        </div>
+    </main>
+    
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
