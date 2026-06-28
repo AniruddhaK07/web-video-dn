@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentMeta = null;
     let pollTimeout  = null;  // setTimeout-based, so we can adapt the interval
     let tasks        = {};
+    const originalTitle = document.title;
 
     // ── Custom Confirm Modal ──────────────────────────────────────────────────
     function showConfirm(message) {
@@ -73,6 +74,19 @@ document.addEventListener('DOMContentLoaded', () => {
         return raw.replace(/ERROR:\s*\[.*?\]\s*[\w-]+:\s*/i, '').substring(0, 120);
     }
 
+    // ── API Helper (includes CSRF header) ─────────────────────────────────────
+    function apiPost(url, body = null) {
+        const opts = {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        };
+        if (body) {
+            opts.headers['Content-Type'] = 'application/json';
+            opts.body = JSON.stringify(body);
+        }
+        return fetch(url, opts);
+    }
+
     // ── Format / Quality selects ──────────────────────────────────────────────
     const formatSelect  = document.getElementById('format');
     const qualitySelect = document.getElementById('quality');
@@ -120,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => {
             const pastedUrl = urlInput.value.trim();
             urlInput.value = pastedUrl;
-            if (pastedUrl.startsWith('http')) fetchBtn.click();
+            if (pastedUrl.startsWith('http') && urlInput.validity.valid) fetchBtn.click();
         }, 50);
     });
 
@@ -133,10 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchBtn.disabled  = true;
 
         try {
-            const res  = await fetch('/api/fetch', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ url })
-            });
+            const res  = await apiPost('/api/fetch', { url });
             const data = await res.json();
 
             if (res.ok && data.title && !data.error) {
@@ -217,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Batch-submit playlist in groups of 10 for speed without overwhelming backend
                 const BATCH = 10;
                 let queued  = 0;
+                let failed  = 0;
 
                 for (let i = 0; i < currentMeta.entries.length; i += BATCH) {
                     const batch = currentMeta.entries.slice(i, i + BATCH);
@@ -224,15 +236,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     await Promise.all(batch.map(async (entry) => {
                         const payload = { url: entry.url, title: entry.title, thumbnail: '', quality, format, subfolder };
                         try {
-                            const res  = await fetch('/api/download', {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify(payload)
-                            });
+                            const res = await apiPost('/api/download', payload);
                             if (res.ok) {
                                 const data = await res.json();
                                 if (data.task_id) { createTaskCard(data.task_id, payload); queued++; }
-                            }
-                        } catch(e) {}
+                                else { failed++; }
+                            } else { failed++; }
+                        } catch(e) { failed++; }
                     }));
 
                     // Brief pause between batches
@@ -241,14 +251,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                showToast(`[SYS] Queued ${queued} tasks from playlist.`, 'success');
+                showToast(`[SYS] Queued ${queued} tasks from playlist.` + (failed ? ` ${failed} failed.` : ''), failed ? 'info' : 'success');
             } else {
                 // Single video
                 const payload = { ...currentMeta, quality, format, subfolder };
-                const res     = await fetch('/api/download', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const res     = await apiPost('/api/download', payload);
                 const data = await res.json();
 
                 if (data.task_id) {
@@ -289,12 +296,14 @@ document.addEventListener('DOMContentLoaded', () => {
         titleEl.textContent = data.title;
         titleEl.title       = data.title;  // native tooltip for long titles
 
-        card.querySelector('.task-thumb').src = data.thumbnail || '';
+        const thumbEl = card.querySelector('.task-thumb');
+        if (data.thumbnail) { thumbEl.src = data.thumbnail; }
+        else { thumbEl.style.display = 'none'; }
 
         card.querySelector('.task-cancel').addEventListener('click', () => cancelTask(id));
 
         card.querySelector('.task-open').addEventListener('click', async () => {
-            try { await fetch(`/api/open/${id}`, { method: 'POST' }); } catch (e) {}
+            try { await apiPost(`/api/open/${id}`); } catch (e) {}
         });
 
         card.querySelector('.task-retry').addEventListener('click', async () => {
@@ -303,13 +312,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 quality: data.quality, format: data.format, subfolder: data.subfolder
             };
             try {
-                await fetch(`/api/dismiss/${id}`, { method: 'POST' });
+                await apiPost(`/api/dismiss/${id}`);
                 card.remove(); delete tasks[id]; updateCount(); checkEmptyState();
 
-                const res    = await fetch('/api/download', {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+                const res    = await apiPost('/api/download', payload);
                 const resData = await res.json();
                 if (resData.task_id) {
                     createTaskCard(resData.task_id, payload);
@@ -331,9 +337,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (isActive) {
             const confirmed = await showConfirm('ABORT THIS TASK?');
             if (!confirmed) return;
-            try { await fetch(`/api/cancel/${id}`, { method: 'POST' }); } catch (e) {}
+            try { await apiPost(`/api/cancel/${id}`); } catch (e) {}
         } else {
-            try { await fetch(`/api/dismiss/${id}`, { method: 'POST' }); } catch (e) {}
+            try { await apiPost(`/api/dismiss/${id}`); } catch (e) {}
             card.remove();
             delete tasks[id];
             updateCount();
@@ -363,7 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!tasks[id]) createTaskCard(id, data);
 
                         const card = tasks[id];
-                        card.className = `task-card status-${data.status}`;
+                        const newClass = `task-card status-${data.status}`;
+                        if (card.className !== newClass) card.className = newClass;
                         card.querySelector('.task-status').textContent = data.status.toUpperCase();
 
                         if (['queued', 'starting', 'downloading', 'processing'].includes(data.status)) {
@@ -395,6 +402,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             card.querySelector('.progress-bar-fill').style.width = '100%';
                             card.querySelector('.task-open').classList.remove('hidden');
                             card.querySelector('.task-retry').classList.add('hidden');
+                            card.querySelector('.task-status').textContent = data.out_dir
+                                ? `SAVED → ${data.out_dir.split(/[\/\\]/).slice(-2).join('/')}`
+                                : 'COMPLETED';
                             card.querySelector('.t-spd').textContent  = '';
                             card.querySelector('.t-eta').textContent  = '';
                             card.querySelector('.t-size').textContent = '';
@@ -438,7 +448,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateCount() {
-        taskCount.textContent = Object.keys(tasks).length;
+        const total = Object.keys(tasks).length;
+        taskCount.textContent = total;
+        updateTitle();
+    }
+
+    function updateTitle() {
+        const activeCount = Object.values(tasks).filter(card =>
+            ['status-downloading', 'status-processing', 'status-queued', 'status-starting']
+                .some(cls => card.classList.contains(cls))
+        ).length;
+        document.title = activeCount > 0
+            ? `(${activeCount}\u2193) ${originalTitle}`
+            : originalTitle;
     }
 
     function checkEmptyState() {
@@ -455,13 +477,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }).catch(() => {});
 
+    // ── Keyboard Shortcuts ────────────────────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        // Escape: close metadata panel or modal
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('confirm-modal');
+            if (!modal.classList.contains('hidden')) {
+                document.getElementById('modal-cancel-btn').click();
+            } else if (!metaPanel.classList.contains('hidden')) {
+                cancelMetaBtn.click();
+            }
+        }
+        // Ctrl+V: focus URL input when not already in an input
+        if (e.ctrlKey && e.key === 'v' && document.activeElement.tagName !== 'INPUT') {
+            urlInput.focus();
+        }
+    });
+
     // ── Global Controls ───────────────────────────────────────────────────────
     document.getElementById('clear-all-btn').addEventListener('click', () => {
         for (const [id, card] of Object.entries(tasks)) {
             const isActive = ['status-downloading', 'status-starting', 'status-processing', 'status-queued']
                 .some(cls => card.classList.contains(cls));
             if (!isActive) {
-                try { fetch(`/api/dismiss/${id}`, { method: 'POST' }); } catch (e) {}
+                try { apiPost(`/api/dismiss/${id}`); } catch (e) {}
                 card.remove();
                 delete tasks[id];
             }
@@ -473,16 +512,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cancel-all-btn').addEventListener('click', async () => {
         const confirmed = await showConfirm('HALT ALL ACTIVE AND QUEUED TASKS?');
         if (confirmed) {
-            try { await fetch('/api/cancel_all', { method: 'POST' }); } catch(e) {}
+            try { await apiPost('/api/cancel_all'); } catch(e) {}
         }
     });
 
     powerOffBtn.addEventListener('click', async () => {
         const confirmed = await showConfirm('INITIATE SYSTEM SHUTDOWN?');
         if (confirmed) {
-            try { await fetch('/api/shutdown', { method: 'POST' }); } catch (e) {}
-            window.close();
-            // Fallback if browser blocks window.close()
+            try { await apiPost('/api/shutdown'); } catch (e) {}
             document.querySelector('.main-layout').classList.add('hidden');
             document.getElementById('offline-container').classList.remove('hidden');
             if (pollTimeout) { clearTimeout(pollTimeout); pollTimeout = null; }
