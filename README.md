@@ -4,10 +4,11 @@ A premium, local, open-source media downloader. Built with a robust Python backe
 
 ## Features
 * **Brutalist UI:** A distraction-free, high-contrast, cyberpunk-inspired terminal aesthetic.
-* **Format Control:** Download in `.mp4`, `.mkv` (video), or `.mp3` (audio extract).
-* **Resolution Caps:** Pull the absolute best quality, or cap at `1080p` / `720p` to save space.
-* **Async Backend:** Downloads run in background threads without blocking the server.
-* **Live Telemetry:** Real-time speed, ETA, and progress updates via the frontend API.
+* **Universal Support:** Powered by hardened `yt-dlp` heuristics to seamlessly download from YouTube, Twitch, Twitter, TikTok, and thousands of other sites.
+* **Format Control:** Download Video (`.mp4`, `.mkv`) with resolution caps up to `1080p`, or rip Lossless Audio (`.flac`) and dynamic bitrates (`.mp3`).
+* **Task Queue Engine:** Concurrent download threading (via ThreadPoolExecutor) with "Halt All", "Retry", and dynamic task highlighting in Windows Explorer.
+* **Live Telemetry:** Real-time speed, ETA, indeterminate "LIVE" stream handling, and animated CSS processing states.
+* **Auto-Updates:** `start.bat` automatically handles environment provisioning and silently upgrades `yt-dlp` to outpace DRM updates.
 
 ## File Architecture
 * `app.py`: Core backend API server utilizing Flask and yt-dlp.

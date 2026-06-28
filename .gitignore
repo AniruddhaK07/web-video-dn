@@ -14,3 +14,9 @@ downloads/
 Thumbs.db
 .vscode/
 .idea/
+
+# Security & Node
+cookies.txt
+node_modules/
+package-lock.json
+package.json
