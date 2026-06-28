@@ -274,10 +274,6 @@ select option { background: var(--bg); color: var(--fg); }
 .modal-actions { display: flex; gap: 10px; }
 .modal-btn { flex: 1; padding: 12px; font-size: 0.8rem; }
 
-/* U-8 — Destructive action styling for HALT_ALL */
-#cancel-all-btn { border-color: var(--accent-red); color: var(--accent-red); }
-#cancel-all-btn:hover { background: var(--accent-red); color: var(--bg); }
-
 /* U-1 — Responsive layout for narrow viewports */
 @media (max-width: 700px) {
     .main-layout { flex-direction: column; }
