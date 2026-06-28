@@ -47,20 +47,16 @@ def get_base_ydl_opts():
     opts = {
         'quiet': True,
         'no_warnings': True,
-        'remote_components': ['ejs:github'],
-        'js_runtimes': {'node': {}}
+        'socket_timeout': 30,
     }
     if os.path.exists('cookies.txt'):
         opts['cookiefile'] = 'cookies.txt'
     return opts
 
-class DownloadCancelled(Exception):
-    pass
-
 # Background cleanup task
 def cleanup_tasks():
     while True:
-        time.sleep(3600)
+        time.sleep(300)
         now = time.time()
         to_delete = []
         for tid, data in downloads.items():
@@ -97,6 +93,7 @@ def fetch_metadata():
             'no_warnings': True,
             'extract_flat': True,
             'skip_download': True,
+            'socket_timeout': 20,
         }
         if os.path.exists('cookies.txt'):
             ydl_opts['cookiefile'] = 'cookies.txt'
@@ -209,7 +206,12 @@ def download_worker(task_id, url, quality, fmt, subfolder):
             downloads[task_id]['error_message'] = 'Invalid subfolder path.'
             return
             
-    os.makedirs(out_dir, exist_ok=True)
+    try:
+        os.makedirs(out_dir, exist_ok=True)
+    except OSError as e:
+        downloads[task_id]['status'] = 'error'
+        downloads[task_id]['error_message'] = f'Cannot create output directory: {e}'
+        return
     
     downloads[task_id]['out_dir'] = out_dir
     
