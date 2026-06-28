@@ -7,6 +7,7 @@ import subprocess
 import re
 import logging
 import shutil
+import platform
 from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, request, jsonify, render_template
 
@@ -26,6 +27,12 @@ app = Flask(__name__)
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
+@app.before_request
+def csrf_protect():
+    if request.method in ('POST', 'PUT', 'DELETE'):
+        if request.headers.get('X-Requested-With') != 'XMLHttpRequest':
+            return jsonify({'error': 'Forbidden'}), 403
+
 def verify_ffmpeg():
     try:
         subprocess.run(['ffmpeg', '-version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
@@ -38,6 +45,7 @@ verify_ffmpeg()
 import yt_dlp
 
 downloads = {}
+downloads_lock = threading.Lock()
 executor = ThreadPoolExecutor(max_workers=3)
 
 class DownloadCancelled(Exception):
@@ -58,13 +66,14 @@ def cleanup_tasks():
     while True:
         time.sleep(300)
         now = time.time()
-        to_delete = []
-        for tid, data in downloads.items():
-            if data.get('status') in ['completed', 'error', 'cancelled']:
-                if now - data.get('end_time', now) > 3600:
-                    to_delete.append(tid)
-        for tid in to_delete:
-            del downloads[tid]
+        with downloads_lock:
+            to_delete = [
+                tid for tid, data in downloads.items()
+                if data.get('status') in ['completed', 'error', 'cancelled']
+                and now - data.get('end_time', now) > 3600
+            ]
+            for tid in to_delete:
+                del downloads[tid]
 
 threading.Thread(target=cleanup_tasks, daemon=True).start()
 
@@ -88,15 +97,11 @@ def fetch_metadata():
         
     try:
         # Optimize fetch by stripping heavy DRM and runtime components
-        ydl_opts = {
-            'quiet': True,
-            'no_warnings': True,
+        ydl_opts = get_base_ydl_opts()
+        ydl_opts.update({
             'extract_flat': True,
             'skip_download': True,
-            'socket_timeout': 20,
-        }
-        if os.path.exists('cookies.txt'):
-            ydl_opts['cookiefile'] = 'cookies.txt'
+        })
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
             
@@ -148,9 +153,6 @@ def start_download():
     title = data.get('title', 'Unknown')
     thumbnail = data.get('thumbnail', '')
     
-    if not url:
-        return jsonify({'error': 'URL is required'}), 400
-        
     task_id = str(uuid.uuid4())
     downloads[task_id] = {
         'status': 'queued', 
@@ -198,8 +200,8 @@ def download_worker(task_id, url, quality, fmt, subfolder):
     out_dir = base_out_dir
     
     if subfolder:
-        requested_path = os.path.abspath(os.path.join(base_out_dir, subfolder))
-        if requested_path.startswith(base_out_dir):
+        requested_path = os.path.normcase(os.path.abspath(os.path.join(base_out_dir, subfolder)))
+        if requested_path.startswith(os.path.normcase(base_out_dir)):
             out_dir = requested_path
         else:
             downloads[task_id]['status'] = 'error'
@@ -281,8 +283,6 @@ def download_worker(task_id, url, quality, fmt, subfolder):
                 speed_str = clean_str(d.get('_speed_str', 'N/A'))
                 eta_str = clean_str(d.get('_eta_str', 'N/A'))
                 
-                total_bytes = d.get('total_bytes') or d.get('total_bytes_estimate')
-                
                 if total_bytes:
                     size_str = format_size(total_bytes)
                 else:
@@ -298,7 +298,7 @@ def download_worker(task_id, url, quality, fmt, subfolder):
                     'eta': eta_str,
                     'size': size_str
                 })
-            except Exception:
+            except (KeyError, ValueError, TypeError):
                 pass
         elif d['status'] == 'finished':
             downloads[task_id].update({
@@ -329,7 +329,8 @@ def download_worker(task_id, url, quality, fmt, subfolder):
 
 @app.route('/api/status')
 def all_status():
-    return jsonify(downloads)
+    with downloads_lock:
+        return jsonify(dict(downloads))
 
 @app.route('/api/status/<task_id>')
 def check_status(task_id):
@@ -346,7 +347,6 @@ def dismiss_task(task_id):
 @app.route('/api/open/<task_id>', methods=['POST'])
 def open_folder(task_id):
     if task_id in downloads:
-        import platform
         file_path = downloads[task_id].get('filename')
         folder = downloads[task_id].get('out_dir')
         
@@ -366,11 +366,13 @@ def open_folder(task_id):
 
 @app.route('/api/shutdown', methods=['POST'])
 def shutdown():
-    import os, time, threading
     def delayed_exit():
-        time.sleep(0.5)
+        with downloads_lock:
+            for data in downloads.values():
+                data['cancelled'] = True
+        time.sleep(2)
         os._exit(0)
-    threading.Thread(target=delayed_exit).start()
+    threading.Thread(target=delayed_exit, daemon=True).start()
     return jsonify({'status': 'shutting down'})
 
 if __name__ == '__main__':
