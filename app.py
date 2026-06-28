@@ -213,6 +213,13 @@ def download_worker(task_id, url, quality, fmt, subfolder):
     
     downloads[task_id]['out_dir'] = out_dir
     
+    # Check if we have at least 100MB free before even initiating
+    usage = shutil.disk_usage(out_dir)
+    if usage.free < 104857600:
+        downloads[task_id]['status'] = 'error'
+        downloads[task_id]['error_message'] = 'Insufficient disk space (< 100MB free).'
+        return
+    
     ydl_opts = get_base_ydl_opts()
     ydl_opts.update({
         'outtmpl': os.path.join(out_dir, '%(title)s [%(id)s].%(ext)s'),
@@ -221,6 +228,7 @@ def download_worker(task_id, url, quality, fmt, subfolder):
     
     if fmt == 'audio':
         ydl_opts['format'] = 'bestaudio/best'
+        ydl_opts['writethumbnail'] = True
         if quality == 'flac':
             ydl_opts['postprocessors'] = [{
                 'key': 'FFmpegExtractAudio',
@@ -238,6 +246,11 @@ def download_worker(task_id, url, quality, fmt, subfolder):
                 'preferredcodec': 'mp3',
                 'preferredquality': '192',
             }]
+        
+        ydl_opts['postprocessors'].extend([
+            {'key': 'FFmpegMetadata'},
+            {'key': 'EmbedThumbnail'},
+        ])
     else:
         if quality == '1080p':
             ydl_opts['format'] = 'bv*[height<=1080]+ba/b[height<=1080]/best'
@@ -255,6 +268,13 @@ def download_worker(task_id, url, quality, fmt, subfolder):
             
         if d['status'] == 'downloading':
             try:
+                total_bytes = d.get('total_bytes') or d.get('total_bytes_estimate')
+                if total_bytes and not downloads[task_id].get('space_checked'):
+                    usage = shutil.disk_usage(out_dir)
+                    if usage.free < (total_bytes + 52428800): # Video size + 50MB buffer
+                        raise Exception(f"Insufficient space. Need {format_size(total_bytes)}, only {format_size(usage.free)} free.")
+                    downloads[task_id]['space_checked'] = True
+                    
                 percent_str = clean_str(d.get('_percent_str', '0%'))
                 speed_str = clean_str(d.get('_speed_str', 'N/A'))
                 eta_str = clean_str(d.get('_eta_str', 'N/A'))

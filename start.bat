@@ -9,7 +9,7 @@ IF NOT EXIST "venv" (
     .\venv\Scripts\pip.exe install -r requirements.txt
 ) ELSE (
     echo [SYS] Ensuring extractors are up-to-date...
-    .\venv\Scripts\pip.exe install -U yt-dlp --quiet
+    .\venv\Scripts\pip.exe install -U yt-dlp mutagen --quiet
 )
 
 echo.
