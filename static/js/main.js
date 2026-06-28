@@ -520,6 +520,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const confirmed = await showConfirm('INITIATE SYSTEM SHUTDOWN?');
         if (confirmed) {
             try { await apiPost('/api/shutdown'); } catch (e) {}
+            window.close();
             document.querySelector('.main-layout').classList.add('hidden');
             document.getElementById('offline-container').classList.remove('hidden');
             if (pollTimeout) { clearTimeout(pollTimeout); pollTimeout = null; }
