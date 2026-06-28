@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syncopate:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=3">
 </head>
 <body>
     <div class="crt-overlay"></div>
@@ -32,14 +32,14 @@
     <main class="container main-layout">
         <div class="left-panel">
             <header class="header">
-                <h1>VIDEO-DWN</h1>
+                <h1>SYS.DWN</h1>
                 <p class="subtitle">[ PROTOCOL: MEDIA_ACQUISITION ]<span class="cursor">_</span></p>
             </header>
 
             <form id="fetch-form" class="download-form">
                 <div class="input-group">
                     <label for="url">TARGET.URL</label>
-                    <input type="url" id="url" name="url" placeholder="INPUT VALID NETWORK PROTOCOL..." required>
+                    <input type="url" id="url" name="url" placeholder="INPUT VALID NETWORK PROTOCOL..." required aria-label="Video URL">
                 </div>
                 <button type="submit" class="submit-btn" id="fetch-btn">
                     <span>FETCH_METADATA</span>
@@ -48,7 +48,7 @@
 
             <div id="metadata-panel" class="metadata-panel hidden">
                 <div class="meta-content">
-                    <img id="meta-thumb" src="" alt="Thumbnail">
+                    <img id="meta-thumb" src="" alt="Thumbnail" style="display:none">
                     <div class="meta-info">
                         <h3 id="meta-title">TITLE</h3>
                         <p>DUR: <span id="meta-duration"></span></p>
@@ -58,7 +58,7 @@
                 <div class="options-row">
                     <div class="input-group select-group">
                         <label for="quality">RES.MATRIX</label>
-                        <select id="quality" name="quality">
+                        <select id="quality" name="quality" aria-label="Video resolution or audio bitrate">
                             <option value="best">MAX_AVAILABLE</option>
                             <option value="1080p">1080P_CAP</option>
                             <option value="720p">720P_CAP</option>
@@ -67,7 +67,7 @@
 
                     <div class="input-group select-group">
                         <label for="format">FORMAT</label>
-                        <select id="format" name="format">
+                        <select id="format" name="format" aria-label="Output format">
                             <option value="mp4">VID_MP4</option>
                             <option value="mkv">VID_MKV</option>
                             <option value="audio">AUDIO_ONLY</option>
@@ -148,6 +148,6 @@
         </div>
     </template>
 
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js?v=3"></script>
 </body>
 </html>
