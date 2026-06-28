@@ -5,19 +5,21 @@
 With SYS.DWN, you can download high-quality videos and extract audio from thousands of platforms (including YouTube, Twitch, TikTok, Twitter/X) directly to your local drive without any limitations.
 
 ## Features
-* **Brutalist UI:** A distraction-free, high-contrast, cyberpunk-inspired terminal aesthetic.
+* **Responsive Brutalist UI:** A mobile, tablet, and desktop friendly distraction-free terminal layout with an immersive cyberpunk aesthetic.
 * **Universal Support:** Powered by hardened `yt-dlp` heuristics to seamlessly download from YouTube, Twitch, Twitter, TikTok, and thousands of other sites.
-* **Format Control:** Download Video (`.mp4`, `.mkv`) with resolution caps up to `1080p`, or rip Lossless Audio (`.flac`) and dynamic bitrates (`.mp3`).
-* **Task Queue Engine:** Concurrent download threading (via ThreadPoolExecutor) with "Halt All", "Retry", and dynamic task highlighting in Windows Explorer.
-* **Live Telemetry:** Real-time speed, ETA, indeterminate "LIVE" stream handling, and animated CSS processing states.
-* **Auto-Updates:** `start.bat` automatically handles environment provisioning and silently upgrades `yt-dlp` to outpace DRM updates.
+* **Format Control:** Download Video (`.mp4`, `.mkv`) with resolution caps up to `1080p`, or rip Lossless Audio (`.flac`) and dynamic bitrates (`.mp3`) with embedded metadata and artwork support.
+* **Task Queue Engine:** Concurrent download threading (via ThreadPoolExecutor) with "Halt All", "Retry", and file localization shortcuts in Windows Explorer.
+* **Live Telemetry & Title Indicators:** Real-time speed, ETA, and size status lines, combined with dynamic page title tags (e.g. `(3↓) SYS.DWN`) so you can watch download tasks from your browser's tab bar.
+* **Interactive UI States:** Animated card entrances, color-coded task status LEDs, pulsing active-glow states for downloads/processing, and a radar empty-state.
+* **Keyboard Shortcuts:** Built for power users. Press `Ctrl+V` to instantly focus and paste into the terminal URL block, or `Escape` to close active panels/modals.
+* **Auto-Updates:** `start.bat` automatically handles virtual environment provisioning and silently upgrades dependencies (`yt-dlp` & `mutagen`) on launch to stay ahead of DRM changes.
 
 ## Prerequisites
 To run this project, you will need the following installed on your system:
 1. **Python 3.10+**: Core backend runtime. Make sure it is added to your system `$PATH`.
 2. **FFmpeg**: Required for media processing (merging video and audio tracks, extracting mp3/flac). 
    - *Windows users can install it via winget:* `winget install Gyan.FFmpeg`
-3. **Node.js**: Required by `yt-dlp` for solving complex JavaScript challenges and ciphers used by platforms to protect their media.
+3. **Node.js**: Required by `yt-dlp` for solving complex JavaScript cipher and signature challenges used by video streaming platforms to block programmatic downloads. (No NPM configuration or custom JavaScript packages are required—only the system runtime).
 
 ## Quick Start (Windows)
 1. Clone the repository to your local machine.
