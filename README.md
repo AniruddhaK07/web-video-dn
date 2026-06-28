@@ -62,3 +62,4 @@ The application will automatically detect the `cookies.txt` file on the next dow
 * `static/css/style.css`: Cyberpunk styling, variables, and structural grid components.
 * `static/js/main.js`: Asynchronous polling, UI state management, and server communication.
 * `start.bat`: Windows launch script for easy environment initialization and server booting.
+ 
