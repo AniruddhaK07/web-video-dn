@@ -80,6 +80,10 @@ input, select {
     padding: 12px; font-family: var(--font-mono); font-size: 0.9rem; outline: none; transition: all 0.2s;
 }
 input:focus, select:focus { border-color: var(--fg); background: rgba(255, 255, 255, 0.05); }
+#url:focus {
+    border-color: var(--accent-green);
+    box-shadow: 0 0 12px rgba(51, 255, 119, 0.15), inset 3px 0 0 var(--accent-green);
+}
 input::placeholder { color: var(--fg-dim); }
 select option { background: var(--bg); color: var(--fg); }
 
@@ -146,14 +150,43 @@ select option { background: var(--bg); color: var(--fg); }
 .empty-state {
     display: flex; flex-direction: column; justify-content: center; align-items: center;
     flex: 1; gap: 6px; opacity: 0.2; pointer-events: none; padding: 40px 0;
+    position: relative;
 }
 .empty-state span { font-family: var(--font-head); font-size: 1.1rem; letter-spacing: 4px; }
 .empty-state p    { font-size: 0.7rem; color: var(--fg-dim); letter-spacing: 2px; }
+.empty-state::before {
+    content: '';
+    width: 60px; height: 60px;
+    border: 1px solid rgba(240, 240, 240, 0.15);
+    border-radius: 50%;
+    animation: radar-ping 3s ease-out infinite;
+    margin-bottom: 10px;
+}
+.empty-state::after {
+    content: '';
+    width: 60px; height: 60px;
+    border: 1px solid rgba(240, 240, 240, 0.08);
+    border-radius: 50%;
+    animation: radar-ping 3s ease-out 1.5s infinite;
+    position: absolute;
+}
+@keyframes radar-ping {
+    0%   { transform: scale(0.5); opacity: 0.6; }
+    100% { transform: scale(2.5); opacity: 0; }
+}
 
 /* Task Cards */
-.task-card { display: flex; gap: 15px; border: 1px solid var(--border); padding: 10px; background: rgba(0,0,0,0.4); position: relative; }
-.task-card.status-downloading { border-color: var(--accent-green); }
-.task-card.status-processing  { border-color: var(--accent-blue); }
+.task-card { display: flex; gap: 15px; border: 1px solid var(--border); padding: 10px; background: rgba(0,0,0,0.4); position: relative; animation: card-enter 0.35s ease-out; transition: box-shadow 0.4s, opacity 0.3s; }
+@keyframes card-enter {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.task-card.status-downloading { border-color: var(--accent-green); box-shadow: 0 0 18px rgba(51, 255, 119, 0.1), inset 0 0 18px rgba(51, 255, 119, 0.03); }
+.task-card.status-processing  { border-color: var(--accent-blue); box-shadow: 0 0 18px rgba(51, 170, 255, 0.1), inset 0 0 18px rgba(51, 170, 255, 0.03); animation: card-enter 0.35s ease-out, glow-pulse 2.5s ease-in-out infinite; }
+@keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 18px rgba(51, 170, 255, 0.1), inset 0 0 18px rgba(51, 170, 255, 0.03); }
+    50%      { box-shadow: 0 0 28px rgba(51, 170, 255, 0.2), inset 0 0 25px rgba(51, 170, 255, 0.06); }
+}
 .task-card.status-completed   { border-color: var(--fg-dim); opacity: 0.7; }
 .task-card.status-error       { border-color: var(--accent-red); }
 .task-card.status-cancelled   { border-color: var(--accent-red); opacity: 0.5; }
@@ -175,7 +208,20 @@ select option { background: var(--bg); color: var(--fg); }
 .task-open:hover    { border-color: var(--accent-green); color: var(--accent-green); }
 .task-retry:hover   { border-color: var(--accent-blue); color: var(--accent-blue); }
 
-.task-status     { font-size: 0.65rem; color: var(--fg-dim); margin-bottom: 5px; }
+.task-status     { font-size: 0.65rem; color: var(--fg-dim); margin-bottom: 5px; display: flex; align-items: center; gap: 6px; }
+.task-status::before {
+    content: '\25CF';
+    font-size: 6px;
+    color: var(--fg-dim);
+    flex-shrink: 0;
+}
+.status-downloading .task-status::before { color: var(--accent-green); }
+.status-processing  .task-status::before,
+.status-queued      .task-status::before,
+.status-starting    .task-status::before { color: var(--accent-blue); }
+.status-error       .task-status::before,
+.status-cancelled   .task-status::before { color: var(--accent-red); }
+.status-completed   .task-status::before { color: var(--fg-dim); }
 .progress-bar-bg { width: 100%; height: 4px; background: var(--border); margin-bottom: 5px; }
 .progress-bar-fill { height: 100%; width: 0%; background: var(--fg); transition: width 0.2s linear; }
 
@@ -227,3 +273,28 @@ select option { background: var(--bg); color: var(--fg); }
 .modal-message { font-family: var(--font-head); font-size: 0.85rem; letter-spacing: 2px; text-align: center; line-height: 1.6; }
 .modal-actions { display: flex; gap: 10px; }
 .modal-btn { flex: 1; padding: 12px; font-size: 0.8rem; }
+
+/* U-8 — Destructive action styling for HALT_ALL */
+#cancel-all-btn { border-color: var(--accent-red); color: var(--accent-red); }
+#cancel-all-btn:hover { background: var(--accent-red); color: var(--bg); }
+
+/* U-1 — Responsive layout for narrow viewports */
+@media (max-width: 700px) {
+    .main-layout { flex-direction: column; }
+    .left-panel  { border-right: none; border-bottom: 1px dashed var(--border); padding-right: 0; padding-bottom: 20px; max-width: 100%; }
+    .right-panel { max-height: none; max-width: 100%; }
+    .container   { width: 95%; padding: 20px; margin: 20px auto; }
+    .header h1   { font-size: 1.5rem; }
+    .options-row  { flex-direction: column; }
+}
+
+/* U-6 — Reduce motion for accessibility & battery savings */
+@media (prefers-reduced-motion: reduce) {
+    .crt-overlay { display: none; }
+    .cursor { animation: none; }
+    .progress-bar-fill { animation: none !important; transition: none !important; }
+    .task-card.status-processing .progress-bar-fill { animation: none; }
+    .toast { animation: none; }
+    .task-card { animation: none !important; }
+    .empty-state::before, .empty-state::after { animation: none; display: none; }
+}
