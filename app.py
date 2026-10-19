@@ -51,13 +51,14 @@ executor = ThreadPoolExecutor(max_workers=3)
 class DownloadCancelled(Exception):
     pass
 
-def get_base_ydl_opts():
+def get_base_ydl_opts(use_cookies=True):
     opts = {
         'quiet': True,
         'no_warnings': True,
         'socket_timeout': 30,
+        'js_runtimes': {'node': {}},
     }
-    if os.path.exists('cookies.txt'):
+    if use_cookies and os.path.exists('cookies.txt'):
         opts['cookiefile'] = 'cookies.txt'
     return opts
 
@@ -103,7 +104,19 @@ def fetch_metadata():
             'skip_download': True,
         })
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
+            try:
+                info = ydl.extract_info(url, download=False)
+            except Exception as e_cook:
+                if os.path.exists('cookies.txt'):
+                    ydl_opts_fallback = get_base_ydl_opts(use_cookies=False)
+                    ydl_opts_fallback.update({
+                        'extract_flat': True,
+                        'skip_download': True,
+                    })
+                    with yt_dlp.YoutubeDL(ydl_opts_fallback) as ydl_fallback:
+                        info = ydl_fallback.extract_info(url, download=False)
+                else:
+                    raise e_cook
             
             if 'entries' in info:
                 entries = []
@@ -252,6 +265,7 @@ def download_worker(task_id, url, quality, fmt, subfolder):
             }]
         
         ydl_opts['postprocessors'].extend([
+            {'key': 'FFmpegThumbnailsConvertor', 'format': 'jpg'},
             {'key': 'FFmpegMetadata'},
             {'key': 'EmbedThumbnail'},
         ])
@@ -321,6 +335,23 @@ def download_worker(task_id, url, quality, fmt, subfolder):
     except Exception as e:
         if downloads[task_id].get('cancelled'):
             downloads[task_id]['status'] = 'cancelled'
+        elif 'cookiefile' in ydl_opts:
+            # Fallback retry without cookies if cookies caused 403 or extraction error
+            try:
+                downloads[task_id]['progress'] = 'Retrying without cookies...'
+                ydl_opts_nocookies = dict(ydl_opts)
+                ydl_opts_nocookies.pop('cookiefile', None)
+                with yt_dlp.YoutubeDL(ydl_opts_nocookies) as ydl:
+                    ydl.download([url])
+                if downloads[task_id].get('cancelled'):
+                    downloads[task_id]['status'] = 'cancelled'
+                else:
+                    downloads[task_id]['status'] = 'completed'
+            except DownloadCancelled:
+                downloads[task_id]['status'] = 'cancelled'
+            except Exception as e_retry:
+                downloads[task_id]['status'] = 'error'
+                downloads[task_id]['error_message'] = str(e_retry)
         else:
             downloads[task_id]['status'] = 'error'
             downloads[task_id]['error_message'] = str(e)
@@ -349,6 +380,15 @@ def open_folder(task_id):
     if task_id in downloads:
         file_path = downloads[task_id].get('filename')
         folder = downloads[task_id].get('out_dir')
+        
+        if file_path:
+            if not os.path.exists(file_path):
+                base_name = os.path.splitext(file_path)[0]
+                for ext in ['.mp3', '.flac', '.mkv', '.mp4', '.m4a']:
+                    if os.path.exists(base_name + ext):
+                        file_path = base_name + ext
+                        downloads[task_id]['filename'] = file_path
+                        break
         
         if file_path and os.path.exists(file_path):
             if platform.system() == "Windows":

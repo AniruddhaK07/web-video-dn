@@ -6,10 +6,10 @@ IF NOT EXIST "venv" (
     echo [SYS] Initializing Virtual Environment for the first time...
     python -m venv venv
     echo [SYS] Installing dependencies...
-    .\venv\Scripts\pip.exe install -r requirements.txt
+    .\venv\Scripts\python.exe -m pip install -r requirements.txt
 ) ELSE (
     echo [SYS] Ensuring extractors are up-to-date...
-    .\venv\Scripts\pip.exe install -U yt-dlp mutagen --quiet
+    .\venv\Scripts\python.exe -m pip install -U yt-dlp mutagen --quiet
 )
 
 echo.

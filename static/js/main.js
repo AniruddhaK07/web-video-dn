@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (/not available|unavailable/i.test(raw))   return 'TARGET UNAVAILABLE: Content may have been removed.';
         if (/disk|no space|insufficient/i.test(raw))  return 'DISK FULL: Not enough space for this download.';
         if (/network|connection|timeout/i.test(raw))  return 'NETWORK ERROR: Connection lost or timed out.';
+        if (/403|forbidden/i.test(raw))               return 'ACCESS FORBIDDEN (403): Stream token rejected or expired cookies.';
         if (/cannot create|output directory/i.test(raw)) return 'DIR ERROR: Cannot create output folder. Check permissions.';
         // Strip ugly yt-dlp prefix like "ERROR: [youtube] videoId:"
         return raw.replace(/ERROR:\s*\[.*?\]\s*[\w-]+:\s*/i, '').substring(0, 120);
